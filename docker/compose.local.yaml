@@ -1,0 +1,83 @@
+# 复用宿主机 MySQL / Redis，不启动或创建数据库容器。
+# 与相邻 Sanas Watch 一起构建；配置校验无需启动容器。
+name: sanas-local
+services:
+  backend:
+    image: sanas-assetflow-backend:local
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env.local
+        format: raw
+    environment:
+      SERVER_HOST: "0.0.0.0"
+      ENVIRONMENT: prod
+      SERVER_PORT: "8001"
+      DEBUG: "false"
+      LOGGER_LEVEL: INFO
+      DATABASE_HOST: host.docker.internal
+      REDIS_HOST: host.docker.internal
+      # 只用于本机 Docker 网络，公网应使用 HTTPS 并关闭此例外。
+      SANAS_WATCH_ALLOW_INSECURE_HTTP: "true"
+      SANAS_WATCH_BASE_URL: http://watch:3001
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - type: bind
+        source: ../backend/static/upload
+        target: /home/static/upload
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/v1/common/health/ready/', timeout=8)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+  web:
+    image: sanas-assetflow-web:local
+    build:
+      context: ..
+      dockerfile: docker/nginx/Dockerfile.local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging: *logging
+  watch:
+    image: sanas-watch:local
+    build:
+      context: ../../Sanas Watch
+      dockerfile: docker/Dockerfile.sanas
+    restart: unless-stopped
+    environment:
+      UPTIME_KUMA_HOST: "0.0.0.0"
+      UPTIME_KUMA_PORT: "3001"
+      # 在同一容器内的 HTTP 就绪探针，使用回环而不是对外监听地址。
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - type: bind
+        source: ../../Sanas Watch/data
+        target: /app/data
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD, node, -e, "const r=require('http').get('http://127.0.0.1:3001/',s=>process.exit(s.statusCode===302?0:1));r.on('error',()=>process.exit(1));r.setTimeout(4000,()=>{r.destroy();process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    stop_grace_period: 60s
+    logging: *logging

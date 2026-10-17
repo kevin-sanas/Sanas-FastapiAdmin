@@ -28,6 +28,29 @@
 
 </div>
 
+## Sanas AssetFlow：本仓库的二次开发
+
+本仓库基于 [FastApiAdmin](https://github.com/fastapiadmin/FastapiAdmin) 的 `v3.0` 代码（基线提交 `362f005`）开发，保留上游版权与 MIT 许可证。下面列出本仓库新增的功能；用户、角色、菜单、租户等基础平台能力来自上游。
+
+| 范围 | 本次新增内容 |
+| --- | --- |
+| 资产管理 | 单件实物资产、分类、唯一资产编码、在库/待交付/领用中/维修中/已报废状态；同一租户共享资产目录。 |
+| 申请与审批 | 员工提交领用、归还、维修申请；管理员按角色和数据权限审批，不能审批自己的申请；提交申请不会直接改变资产状态。 |
+| 领用闭环 | 领用获批后由管理员确认交付、员工签收，归还时由管理员填写验收结果；领用和归还申请关联同一笔领用记录，完成后资产重新入库。 |
+| 可追溯性 | 审批决定、交付/签收/归还记录、资产状态与保管关系变更审计；并发版本校验和申请幂等键。 |
+| Web 页面 | 资产概览、资产目录、申请与审批、业务审计，沿用 FastApiAdmin 的菜单、表格、表单及暗色主题。 |
+| 服务观测 | 后端存活与就绪探针；资产概览可读取 Sanas Watch 的监测结果，显示响应时间与已观测时段的在线率。Watch 是独立项目，本仓库不包含其二开源码。 |
+
+资产表结构和菜单由 `backend/app/alembic/versions/20261017_01` 至 `20261017_03` 三个迁移管理。详细的状态规则、接口与权限见 [资产模块设计](docs/04-database-design.md)。演示数据由 `backend/app/scripts/seed_assetflow_demo.py` 显式导入，**不会随服务启动自动写入**；默认预览，加 `--apply` 才写入现有开发库。脚本不创建账号，需先准备目标租户的申请人与审批人。
+
+```powershell
+# 在 backend 目录，配置好 env/.env.dev 且完成迁移后执行
+.\.venv\Scripts\python.exe -m app.scripts.seed_assetflow_demo
+.\.venv\Scripts\python.exe -m app.scripts.seed_assetflow_demo --apply
+```
+
+质量检查入口为仓库根目录的 `check_assetflow.ps1`。本地已完成资产申请到归还验收的页面与数据库验收，以及后端测试和前端静态检查。`docker/compose.local.yaml` 是依赖相邻 Sanas Watch 源码与既有 MySQL/Redis 的**本机方案**；Docker 镜像构建和容器运行尚未验收，不能视为已可部署的交付物。实际启动与迁移步骤见 [运行说明](docs/04-database-design.md#8-运行与复现)。
+
 ## 📘 项目介绍
 
 **FastApiAdmin** 是一套 **完全开源、高度模块化、技术先进的现代化快速开发平台**，旨在帮助开发者高效搭建高质量的企业级中后台系统。该项目采用 **前后端分离架构**，融合 Python 后端框架 `FastAPI` 和前端主流框架 `Vue3` 实现多端统一开发，提供了一站式开箱即用的开发体验。

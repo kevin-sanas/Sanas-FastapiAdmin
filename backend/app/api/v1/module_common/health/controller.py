@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -10,15 +11,17 @@ from app.common.constant import RET
 from app.common.response import ErrorResponse, ResponseSchema, SuccessResponse
 from app.config.setting import settings
 from app.core.database import async_db_session
+from app.core.logger import log
 
 HealthRouter = APIRouter(prefix="/health", tags=["健康检查"])
+READINESS_TIMEOUT_SECONDS = 3.0
 
 
 @HealthRouter.get(
     "/",
     summary="存活探针（Liveness）",
     description="进程已启动即可返回 200；不探测外部依赖，供 K8s livenessProbe 使用。",
-    response_model=ResponseSchema[dict],
+    response_model=ResponseSchema[bool],
 )
 async def health_check() -> JSONResponse:
     """轻量存活检查：避免在依赖故障时误杀进程。"""
@@ -42,15 +45,19 @@ async def readiness_check(request: Request) -> JSONResponse:
 
     db_ok = False
     if settings.SQL_DB_ENABLE:
+
+        async def probe_database() -> None:
+            async with async_db_session() as session, session.begin():
+                await session.execute(text("SELECT 1"))
+
         try:
-            async with async_db_session() as session:
-                async with session.begin():
-                    await session.execute(text("SELECT 1"))
+            await asyncio.wait_for(probe_database(), timeout=READINESS_TIMEOUT_SECONDS)
             checks["database"] = True
             db_ok = True
         except Exception as e:
             checks["database"] = False
-            detail_errors.append(f"database:{e!s}")
+            detail_errors.append("database:unavailable")
+            log.warning("数据库就绪探测失败 ({})", type(e).__name__)
     else:
         checks["database"] = False
         detail_errors.append("database:SQL_DB_ENABLE is false")
@@ -61,7 +68,7 @@ async def readiness_check(request: Request) -> JSONResponse:
         try:
             rd = getattr(request.app.state, "redis", None)
             if rd is not None:
-                await rd.ping()  # type: ignore[misc]
+                await asyncio.wait_for(rd.ping(), timeout=READINESS_TIMEOUT_SECONDS)
                 checks["redis"] = True
                 redis_ok = True
             else:
@@ -69,7 +76,8 @@ async def readiness_check(request: Request) -> JSONResponse:
                 detail_errors.append("redis:app.state.redis missing")
         except Exception as e:
             checks["redis"] = False
-            detail_errors.append(f"redis:{e!s}")
+            detail_errors.append("redis:unavailable")
+            log.warning("Redis 就绪探测失败 ({})", type(e).__name__)
     else:
         checks["redis"] = None
 

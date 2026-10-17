@@ -60,6 +60,8 @@ docker/nginx/web/dist
 docker/nginx/ssl/*
 !docker/nginx/ssl/.gitkeep
 docker/.env
+docker/.env.local
+!docker/nginx/Dockerfile.local
 
 frontend/node_modules
 frontend/dist

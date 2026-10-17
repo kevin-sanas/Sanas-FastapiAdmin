@@ -1,11 +1,11 @@
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from alembic import context
 from app.config.path_conf import ALEMBIC_VERSION_DIR
 from app.config.setting import settings
 from app.core.base_model import MappedBase
@@ -14,14 +14,8 @@ from app.utils.import_util import ImportUtil
 # 确保 alembic 版本目录存在
 ALEMBIC_VERSION_DIR.mkdir(parents=True, exist_ok=True)
 
-# 清除MappedBase.metadata中的表定义，避免重复注册
-if hasattr(MappedBase, "metadata") and MappedBase.metadata.tables:
-    print(f"🧹 清除已存在的表定义，当前有 {len(MappedBase.metadata.tables)} 个表")
-    # 创建一个新的空metadata对象
-    from sqlalchemy import MetaData
-
-    MappedBase.metadata = MetaData()
-    print("✅️ 已重置metadata")
+# 保留已注册模型：重置 metadata 会丢失已被 Python 缓存的模型表定义，
+# find_models() 再次 import 这些模块时不会重新声明它们。
 
 # 自动查找所有模型
 print("🔍 开始查找模型...")

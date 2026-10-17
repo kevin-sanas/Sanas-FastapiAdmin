@@ -85,7 +85,8 @@ const connectWebSocket = () => {
   error.value = "";
 
   try {
-    const url = new URL("/api/v1/ai/chat/ws", WS_URL);
+    const base = WS_URL || window.location.origin.replace(/^http/, "ws");
+    const url = new URL("/api/v1/ai/chat/ws", base);
     const token = Auth.getAccessToken();
     if (token) url.searchParams.append("token", token);
 

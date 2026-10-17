@@ -16,6 +16,7 @@ fastapi-limiter==0.1.6                 # 接口限流
 greenlet==3.1.1                        # 协程框架
 gunicorn==23.0.0                       # 协程框架
 httpx==0.27.2                          # HTTP 客户端
+prometheus-client==0.24.1               # Watch 指标文本解析
 itsdangerous==2.2.0                    # 用于安全处理各种数据，如密码、密钥等
 jinja2==3.1.6                          # 模板引擎
 loguru==0.7.3                          # 日志

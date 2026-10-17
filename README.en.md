@@ -28,6 +28,12 @@ English | [简体中文](./README.md)
 
 </div>
 
+## Sanas AssetFlow additions
+
+This repository extends [FastApiAdmin](https://github.com/fastapiadmin/FastapiAdmin) `v3.0` (base commit `362f005`) under its MIT license. The new AssetFlow module adds a tenant-shared physical asset catalog, role-scoped issue/return/repair requests and approvals, manager handover, employee receipt, return inspection, linked loan records, business audit logs, and four Web pages. It also exposes backend liveness/readiness probes and can display results from a separately maintained Sanas Watch instance. The upstream user, role, menu, and tenant framework is not claimed as original work.
+
+See the [Chinese module documentation](docs/04-database-design.md) for the workflow and setup. Demo records are imported only when the explicit seed command uses `--apply`. The local Docker Compose configuration has not completed image-build or container validation.
+
 ## 📘 Project Introduction
 
 **FastApiAdmin** is a **completely open-source, highly modular, and technologically advanced modern rapid development platform** designed to help developers efficiently build high-quality enterprise-level backend and frontend systems. This project adopts a **frontend-backend separation architecture**, integrating the Python backend framework `FastAPI` and the mainstream frontend framework `Vue3` to achieve unified development across multiple terminals, providing a one-stop out-of-the-box development experience.

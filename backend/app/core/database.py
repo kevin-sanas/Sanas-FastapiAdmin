@@ -118,7 +118,13 @@ async def create_tables() -> None:
     - None
     """
     async with async_engine.begin() as coon:
-        await coon.run_sync(MappedBase.metadata.create_all)
+        # 已采用迁移管理的业务表不参与首次启动建表，避免 create_all 掩盖漏跑迁移。
+        tables = [
+            table
+            for table in MappedBase.metadata.sorted_tables
+            if not table.info.get("migration_managed")
+        ]
+        await coon.run_sync(MappedBase.metadata.create_all, tables=tables)
 
 
 async def drop_tables() -> None:
